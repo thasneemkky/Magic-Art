@@ -1,0 +1,17 @@
+{
+  "short_name": "Magic Art",
+  "name": "Magic Art — Sticker Price Calculator",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='%23f3d27a'><rect width='512' height='512' rx='100' fill='%23121212'/><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' font-size='280'>✦</text></svg>",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#090909",
+  "theme_color": "#090909",
+  "display": "standalone",
+  "orientation": "portrait"
+}
