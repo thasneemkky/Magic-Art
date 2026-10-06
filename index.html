@@ -615,8 +615,9 @@ function calculate(){
  
  let finishLine = finishEnabled ? `Finish: ${finish[1]}\n` : '';
 let cuttingLine = cuttingEnabled ? `Cutting: ${cut[1]}\n` : '';
+let quoteHeader = selected === 'flex' ? "MAGIC ART - BANNER" : "MAGIC ART - STICKER";
 let currentQuoteText = 
-`MAGIC ART — STICKER
+`${quoteHeader}
 Size: ${w} × ${h} ${unit}
 Area: ${areaSqFt.toFixed(2)} sq.ft / pc
 Rate: ${money(price(mat.key))} / sq.ft
