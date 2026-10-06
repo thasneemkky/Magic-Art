@@ -316,6 +316,42 @@ button.primary,button.secondary,button.reset,button.done-btn{border:0;border-rad
  .modal-content { padding: 14px; }
  .admin-group { padding: 8px; margin-bottom: 8px; }
 }
+
+.toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #141414;
+  border: 1px solid #333;
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+.toggle-row label {
+  font-size: 11px;
+  color: var(--gold2);
+  font-weight: 600;
+  margin: 0;
+  cursor: pointer;
+}
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 18px;
+}
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+  position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #333; transition: .3s; border-radius: 18px;
+}
+.slider:before {
+  position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px;
+  background-color: white; transition: .3s; border-radius: 50%;
+}
+input:checked + .slider { background-color: var(--gold); }
+input:checked + .slider:before { transform: translateX(16px); }
+
 </style>
 </head>
 <body>
@@ -395,8 +431,8 @@ button.primary,button.secondary,button.reset,button.done-btn{border:0;border-rad
     <div class="line"><span>Rate / sq.ft</span><span id="sumRate">Rs. 0</span></div>
     <div class="line"><span>Quantity</span><span id="sumQty">1</span></div>
     <div class="line"><span>Material</span><span id="sumMaterial">White Vinyl</span></div>
-    <div class="line"><span>Finish</span><span id="sumFinish">No Lamination</span></div>
-    <div class="line"><span>Cutting</span><span id="sumCutting">Rectangle Cut</span></div>
+    <div class="line" id="finishRow"><span>Finish</span><span id="sumFinish">No Lamination</span></div>
+    <div class="line" id="cuttingRow"><span>Cutting</span><span id="sumCutting">Rectangle Cut</span></div>
     <div class="line"><span>1 Sticker Price</span><span id="perPc">Rs. 0</span></div>
   </div>
 </div>
@@ -453,6 +489,10 @@ button.primary,button.secondary,button.reset,button.done-btn{border:0;border-rad
     <!-- Group 2: Extras & Finishing -->
     <div class="admin-group">
       <div class="admin-group-title">Finishing Rates (LKR / sq.ft)</div>
+      <div class="toggle-row" style="margin-bottom:6px;">
+        <label for="enableFinish">Enable Material Finish</label>
+        <label class="switch"><input type="checkbox" id="enableFinish" checked onchange="toggleFinishSection(); calculate()"><span class="slider"></span></label>
+      </div>
       <div class="settings-compact">
         <div class="field-box"><label>No Lamin.</label><input id="p_none" type="number" value="0" oninput="calculate()"></div>
         <div class="field-box"><label>Gloss Lamin.</label><input id="p_gloss" type="number" value="150" oninput="calculate()"></div>
@@ -463,11 +503,16 @@ button.primary,button.secondary,button.reset,button.done-btn{border:0;border-rad
     <!-- Group 3: Cutting & Billing Minimums -->
     <div class="admin-group">
       <div class="admin-group-title">Cutting & Minimum Charges</div>
+      <div class="toggle-row" style="margin-bottom:6px;">
+        <label for="enableCutting">Enable Cutting Charge</label>
+        <label class="switch"><input type="checkbox" id="enableCutting" checked onchange="toggleCuttingSection(); calculate()"><span class="slider"></span></label>
+      </div>
       <div class="settings-compact">
         <div class="field-box"><label>Rect Cut</label><input id="p_rect" type="number" value="0" oninput="calculate()"></div>
         <div class="field-box"><label>Contour Cut</label><input id="p_contour" type="number" value="150" oninput="calculate()"></div>
         <div class="field-box"><label>Min Charge</label><input id="minCharge" type="number" value="250" oninput="calculate()"></div>
         <div class="field-box"><label>Min Sq.Ft</label><input id="minArea" type="number" value="0.10" step="0.01" oninput="calculate()"></div>
+        <div class="field-box"><label>Currency</label><input id="currencySymbol" type="text" value="Rs. " oninput="calculate()"></div>
       </div>
     </div>
 
@@ -490,7 +535,10 @@ const finishes=[
 const cuts=[['rect','Rectangle Cut','p_rect'],['contour','Contour Cut','p_contour']];
 let unit='ft', selected='white', items=[];
 
-function money(n){return 'Rs. '+Math.round(n).toLocaleString('en-LK')}
+function money(n){
+  let sym = document.getElementById('currencySymbol') ? document.getElementById('currencySymbol').value : 'Rs. ';
+  return sym + Math.round(n).toLocaleString('en-LK');
+}
 function get(id){return Number(document.getElementById(id).value)||0}
 
 function build(){
@@ -537,8 +585,10 @@ function calculate(){
  let cut=cuts.find(x=>x[0]===document.getElementById('cutting').value)||cuts[0];
  
  let matCost = billArea * price(mat.key);
- let finishCost = billArea * price(finish[2]);
- let cutCost = billArea * price(cut[2]);
+ let finishEnabled = document.getElementById('enableFinish').checked;
+ let cuttingEnabled = document.getElementById('enableCutting').checked;
+ let finishCost = finishEnabled ? (billArea * price(finish[2])) : 0;
+ let cutCost = cuttingEnabled ? (billArea * price(cut[2])) : 0;
  let calculatedPer = matCost + finishCost + cutCost;
  let per = calculatedPer;
  let currentTotal = per * q;
@@ -563,16 +613,16 @@ function calculate(){
  document.getElementById('sumCutting').textContent=cut[1];
  document.getElementById('perPc').textContent=money(per);
  
- let currentQuoteText = 
-`MAGIC ART — STICKER QUOTE
+ let finishLine = finishEnabled ? `Finish: ${finish[1]}\n` : '';
+let cuttingLine = cuttingEnabled ? `Cutting: ${cut[1]}\n` : '';
+let currentQuoteText = 
+`MAGIC ART — STICKER
 Size: ${w} × ${h} ${unit}
 Area: ${areaSqFt.toFixed(2)} sq.ft / pc
 Rate: ${money(price(mat.key))} / sq.ft
 Quantity: ${q}
 Material: ${mat.name}
-Finish: ${finish[1]}
-Cutting: ${cut[1]}
-Price per 1 Sticker: ${money(per)}
+${finishLine}${cuttingLine}Price per 1 Sticker: ${money(per)}
 Subtotal: ${money(currentTotal)}`;
 
  document.getElementById('quoteText').textContent = currentQuoteText;
@@ -610,13 +660,17 @@ function addItem(){
  let cut=cuts.find(x=>x[0]===document.getElementById('cutting').value)||cuts[0];
  
  let matCost = billArea * price(mat.key);
- let finishCost = billArea * price(finish[2]);
- let cutCost = billArea * price(cut[2]);
+ let finishEnabled = document.getElementById('enableFinish').checked;
+ let cuttingEnabled = document.getElementById('enableCutting').checked;
+ let finishCost = finishEnabled ? (billArea * price(finish[2])) : 0;
+ let cutCost = cuttingEnabled ? (billArea * price(cut[2])) : 0;
  let calculatedPer = matCost + finishCost + cutCost;
  let per = calculatedPer;
  let currentTotal = per * q;
 
- let text = `Size: ${w} × ${h} ${unit} | Qty: ${q} | ${mat.name} | ${finish[1]} | ${cut[1]}`;
+ let finishText = finishEnabled ? ` | ${finish[1]}` : '';
+ let cutText = cuttingEnabled ? ` | ${cut[1]}` : '';
+ let text = `Size: ${w} × ${h} ${unit} | Qty: ${q} | ${mat.name}${finishText}${cutText}`;
  items.push({text, total: money(currentTotal), rawTotal: currentTotal});
  renderItems();
  calculate();
@@ -640,7 +694,7 @@ function removeItem(i){
 
 function sendWhatsApp(){
  let mainText = document.getElementById('quoteText').textContent;
- let msg = "MAGIC ART — STICKER QUOTATION\n\n" + mainText;
+ let msg = mainText;
  if(items.length > 0){
    msg += "\n\n--- MULTI-ITEMS ---\n";
    items.forEach((item, index) => {
@@ -653,7 +707,7 @@ function sendWhatsApp(){
 
 async function copyQuote(){
  let mainText = document.getElementById('quoteText').textContent;
- let msg = "MAGIC ART — STICKER QUOTATION\n\n" + mainText;
+ let msg = mainText;
  if(items.length > 0){
    msg += "\n\n--- MULTI-ITEMS ---\n";
    items.forEach((item, index) => {
@@ -665,16 +719,41 @@ async function copyQuote(){
  showToast('✓ Quote copied to clipboard!');
 }
 
+
+function toggleFinishSection(){
+  const enabled = document.getElementById('enableFinish').checked;
+  document.getElementById('finish').disabled = !enabled;
+  const row = document.getElementById('finishRow');
+  if(row) row.style.display = enabled ? 'flex' : 'none';
+}
+
+function toggleCuttingSection(){
+  const enabled = document.getElementById('enableCutting').checked;
+  document.getElementById('cutting').disabled = !enabled;
+  const row = document.getElementById('cuttingRow');
+  if(row) row.style.display = enabled ? 'flex' : 'none';
+}
+
 function saveSettings(){
- const ids=['p_flex','p_white','p_trans','p_reflect','p_owv','p_other','p_none','p_gloss','p_matte','p_rect','p_contour','minCharge','minArea'];
+ const ids=['p_flex','p_white','p_trans','p_reflect','p_owv','p_other','p_none','p_gloss','p_matte','p_rect','p_contour','minCharge','minArea','currencySymbol'];
  const data={};ids.forEach(id=>data[id]=document.getElementById(id).value);
+ data['enableFinish'] = document.getElementById('enableFinish').checked;
+ data['enableCutting'] = document.getElementById('enableCutting').checked;
  localStorage.setItem('magicArtPrices',JSON.stringify(data));
 }
 
 function loadSettings(){
  try{
   const data=JSON.parse(localStorage.getItem('magicArtPrices')||'{}');
-  Object.keys(data).forEach(id=>{if(document.getElementById(id))document.getElementById(id).value=data[id]});
+  Object.keys(data).forEach(id=>{
+    if(id === 'enableFinish' || id === 'enableCutting'){
+      if(document.getElementById(id)) document.getElementById(id).checked = data[id];
+    } else {
+      if(document.getElementById(id)) document.getElementById(id).value = data[id];
+    }
+  });
+  toggleFinishSection();
+  toggleCuttingSection();
  }catch(e){}
 }
 
@@ -720,9 +799,7 @@ if (window.visualViewport) {
 }
 </script>
 
-<footer style="text-align: center; padding: 16px 10px 24px; font-size: 11px; color: var(--muted, #a7a7a7); border-top: 1px solid var(--line, #292929); margin-top: 24px;">
-  Developed by <a href="https://www.facebook.com/thasneem.june" target="_blank" rel="noopener noreferrer" style="color: var(--gold2, #f3d27a); text-decoration: none; font-weight: 600; transition: color 0.2s;">Thasneem Tec</a>
-</footer>
+<footer style="text-align: center; padding: 20px 16px; font-size: 12px; color: #f5f5f5; border-top: 1px solid #292929; margin-top: 32px; background: #121212; width: 100%; box-sizing: border-box; font-family: inherit;">© 2026–2027 | v1.0 | Developed By <a href="https://www.facebook.com/thasneem.june" target="_blank" style="color: #d9ad4c; text-decoration: none; font-weight: 600;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">Thasneem Tec</a></footer>
 
 </body>
 </html>
